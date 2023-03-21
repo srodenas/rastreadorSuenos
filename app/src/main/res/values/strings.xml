@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">RastreadorSueños</string>
+    <string name="permission_dialog_title">Permisos Recognition</string>
+    <string name="permission_dialog_message">Solicitud de permisos Recognition</string>
+    <string name="permission_positive_button">Aceptar recognition </string>
+    <string name="permission_negative_button">Denegar recognition </string>
+</resources>
