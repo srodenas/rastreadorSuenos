@@ -15,6 +15,33 @@ import com.pmdm.virgen.rastreadorsueos.R
 
 const val PERMISSION_REQUEST_ACTIVITY_RECOGNITION = 999;
 
+
+
+/* MÉTODO QUE COMPRUEBA SI ES NECESARIO PEDIR PERMISOS EN T.EJECUCIÓN
+
+Si la versión es anterior a la Q, no hay que pedir permisos en tiempo de ejecución
+Si la versión es posterior o igual a Q, hay que Comprobar si se han dado los permisos en t. ejecución.
+ */
+
+fun Activity.isPermissionGranted():Boolean {
+    val isAndroidQOrLater: Boolean =
+        android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q
+
+    return if (isAndroidQOrLater.not()) {
+        true  //NO HACE FALTA PEDIRLOS, SÓLO HACE FALTA TENERLOS EN EL MANIFEST
+    } else {
+
+        //DEBEMOS COMPROBAR SI LOS PERMISOS YA SE LOS DIMOS EN T. EJECUCIÓN Y LOS TIENE EL ADMINISTRADOR
+        PackageManager.PERMISSION_GRANTED == ActivityCompat.checkSelfPermission(
+            this, Manifest.permission.ACTIVITY_RECOGNITION
+            //DEVOLVERÁ FALSO, SI DENEGAMOS LOS PERMISOS EN TIEMPO DE EJECUCIÓN.
+            //DEVOLVERÁ TRUE, SI NOS LO PIDIÓ Y SE LOS CONCEDIMOS.
+        )
+    }
+}
+
+
+
 /*
 DEBEMOS DE CONCEDER LOS PERMISOS EN TIEMPO DE EJECUCIÓN.
 
@@ -23,20 +50,27 @@ DEBEMOS DE CONCEDER LOS PERMISOS EN TIEMPO DE EJECUCIÓN.
  */
 
 fun Activity.requestPermission() {
+    //SI NO NOS HA PEDIDO EL SISTEMA LOS PERMISOS, QUE NOS LO PIDA EN T. EJECUCIÓN.
     if (ActivityCompat.shouldShowRequestPermissionRationale(
             this,
             Manifest.permission.ACTIVITY_RECOGNITION
         ).not()
     ) {
+        //HACEMOS QUE NOS PIDA LOS PERMISOS EN T. EJECUCIÓN
         ActivityCompat.requestPermissions(
             this, arrayOf(Manifest.permission.ACTIVITY_RECOGNITION),
             PERMISSION_REQUEST_ACTIVITY_RECOGNITION
         )
 
     }else{
-        showRationalDialog(this);  //LOS DENEGAMOS Y VOLVEMOS A DARLE LA OPCIÓN DE CONCEDERLOS.
+        //EN ESTA OPCIÓN, EL SISTEMA NOS LO PIDIÓ, PERO LO DENEGAMOS, POR TANTO LOS VOLVEMOS A PEDIR MEDIANTE UN DIALOGO.
+        showRationalDialog(this);
     }
 }
+
+
+
+
 
 /*
 función que muestra un formulario personalizado.
@@ -47,42 +81,12 @@ fun showRationalDialog(activity: Activity) {
         setMessage(R.string.permission_dialog_message)
         setPositiveButton(R.string.permission_positive_button){ _, _ ->
 
-                    //Volvemos a solicitarlos en tiempo de ejecución.
-                    ActivityCompat.requestPermissions(
-                            activity, arrayOf(Manifest.permission.ACTIVITY_RECOGNITION),
-                            PERMISSION_REQUEST_ACTIVITY_RECOGNITION
-                    )
+            //Volvemos a solicitarlos en tiempo de ejecución.
+            ActivityCompat.requestPermissions(
+                activity, arrayOf(Manifest.permission.ACTIVITY_RECOGNITION),
+                PERMISSION_REQUEST_ACTIVITY_RECOGNITION
+            )
             //fin expresión
-        } //fin setPositive
-        setNegativeButton(R.string.permission_negative_button){
-                dialog, _ ->
-                    dialog.dismiss();   //cerramos el formulario.
-
-        } //fin setNegative
-
-    }.run{
-        create()
-        show()
-    }
-}
-
-
-/*
-función que muestra un formulario personalizado para concesión de permisos, desde settings.
-Este método se llamará siempre y cuando se haya denegado la opción de permisos tanto la primera vez
-como con el formulario personalizado showRationalDialog. Llamará al método startAppSettings
-que lanzará las preferencias del setting de la app. El usuario podrá aceptar el permiso y se
-anotará por medio del
- */
-fun showSettingsDialog(activity: Activity) {
-    AlertDialog.Builder(activity).apply {
-        setTitle(R.string.permission_dialog_title)
-        setMessage(R.string.permission_dialog_message)
-        setPositiveButton(R.string.permission_positive_button){
-                _,_ ->
-
-          startAppSettings(activity)
-        //fin expresión
         } //fin setPositive
         setNegativeButton(R.string.permission_negative_button){
                 dialog, _ ->
@@ -97,6 +101,40 @@ fun showSettingsDialog(activity: Activity) {
 }
 
 
+
+
+/*
+función que muestra un formulario personalizado para concesión de permisos, desde settings.
+Este método se llamará siempre y cuando se haya denegado la opción de permisos tanto la primera vez
+como con el formulario personalizado que llamamos mediante showRationalDialog. Llamará al método startAppSettings
+que lanzará las preferencias del setting de la app. El usuario podrá aceptar el permiso y se
+anotará por medio del
+ */
+fun showSettingsDialog(activity: Activity) {
+    AlertDialog.Builder(activity).apply {
+        setTitle(R.string.permission_dialog_title)
+        setMessage(R.string.permission_dialog_message)
+        setPositiveButton(R.string.permission_positive_button){
+                _,_ ->
+
+            startAppSettings(activity) //lanzará un intent con el setting de nuestra app.
+            //fin expresión
+        } //fin setPositive
+        setNegativeButton(R.string.permission_negative_button){
+                dialog, _ ->
+            dialog.dismiss();   //cerramos el formulario.
+
+        } //fin setNegative
+
+    }.run{
+        create()
+        show()
+    }
+}
+
+
+
+
 /*
 Este método abre un intent con los detalles de configuración de la app.
 Aquí se podrá permitir de manera manual por el usuario la concesión del permiso.
@@ -108,24 +146,3 @@ fun startAppSettings(context: Context) {
     context.startActivity(intent)
 
 }
-
-
-/*
-Si la versión es anterior a la Q, no hay que pedir permisos en tiempo de ejecución
-Si la versión es posterior o igual a Q, hay que Comprobar si se han dado los permisos en t. ejecución.
- */
-
-fun Activity.isPermissionGranted():Boolean{
-    val isAndroidQOrLater : Boolean = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q
-
-    return if (isAndroidQOrLater.not()){
-        true  //NO HACE FALTA PEDIRLOS, SÓLO HACE FALTA TENERLOS EN EL MANIFEST
-    }else{
-        //DEBEMOS COMPROBAR SI LOS PERMISOS YA SE LOS DIMOS EN T. EJECUCIÓN.
-        PackageManager.PERMISSION_GRANTED == ActivityCompat.checkSelfPermission(
-            this, Manifest.permission.ACTIVITY_RECOGNITION
-        //DEVOLVERÁ FALSO, SI DENEGAMOS LOS PERMISOS EN TIEMPO DE EJECUCIÓN.
-        )
-    }
-}
-
